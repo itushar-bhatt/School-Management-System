@@ -7,5 +7,9 @@ namespace SchoolManagementSystem.Domain.Entities
         public string Email { get; set; } = string.Empty;
         public string FullName { get; set; } = string.Empty;
         public List<string> Roles { get; set; } = new List<string>();
+        
+        // Student-specific properties
+        public string? Class { get; set; }
+        public string? Section { get; set; }
     }
 }
