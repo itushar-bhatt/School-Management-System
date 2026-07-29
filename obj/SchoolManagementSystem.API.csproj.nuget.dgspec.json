@@ -1,0 +1,290 @@
+{
+  "format": 1,
+  "restore": {
+    "/home/tushar/SchoolManagementSystem/SchoolManagementSystem.API/SchoolManagementSystem.API.csproj": {}
+  },
+  "projects": {
+    "/home/tushar/SchoolManagementSystem/SchoolManagementSystem.API/SchoolManagementSystem.API.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "/home/tushar/SchoolManagementSystem/SchoolManagementSystem.API/SchoolManagementSystem.API.csproj",
+        "projectName": "SchoolManagementSystem.API",
+        "projectPath": "/home/tushar/SchoolManagementSystem/SchoolManagementSystem.API/SchoolManagementSystem.API.csproj",
+        "packagesPath": "/home/tushar/.nuget/packages/",
+        "outputPath": "/home/tushar/SchoolManagementSystem/SchoolManagementSystem.API/obj/",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "/home/tushar/.nuget/NuGet/NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {
+              "/home/tushar/SchoolManagementSystem/SchoolManagementSystem.Application/SchoolManagementSystem.Application.csproj": {
+                "projectPath": "/home/tushar/SchoolManagementSystem/SchoolManagementSystem.Application/SchoolManagementSystem.Application.csproj"
+              },
+              "/home/tushar/SchoolManagementSystem/SchoolManagementSystem.Domain/SchoolManagementSystem.Domain.csproj": {
+                "projectPath": "/home/tushar/SchoolManagementSystem/SchoolManagementSystem.Domain/SchoolManagementSystem.Domain.csproj"
+              },
+              "/home/tushar/SchoolManagementSystem/SchoolManagementSystem.Infrastructure/SchoolManagementSystem.Infrastructure.csproj": {
+                "projectPath": "/home/tushar/SchoolManagementSystem/SchoolManagementSystem.Infrastructure/SchoolManagementSystem.Infrastructure.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        }
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "dependencies": {
+            "Microsoft.AspNetCore.Identity.EntityFrameworkCore": {
+              "target": "Package",
+              "version": "[8.0.0, )"
+            },
+            "Microsoft.AspNetCore.OpenApi": {
+              "target": "Package",
+              "version": "[8.0.29, )"
+            },
+            "Microsoft.EntityFrameworkCore.Sqlite": {
+              "target": "Package",
+              "version": "[8.0.0, )"
+            },
+            "Microsoft.EntityFrameworkCore.Tools": {
+              "include": "Runtime, Build, Native, ContentFiles, Analyzers, BuildTransitive",
+              "suppressParent": "All",
+              "target": "Package",
+              "version": "[8.0.0, )"
+            },
+            "Swashbuckle.AspNetCore": {
+              "target": "Package",
+              "version": "[6.6.2, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.AspNetCore.App": {
+              "privateAssets": "none"
+            },
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "/usr/lib/dotnet/sdk/8.0.129/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "/home/tushar/SchoolManagementSystem/SchoolManagementSystem.Application/SchoolManagementSystem.Application.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "/home/tushar/SchoolManagementSystem/SchoolManagementSystem.Application/SchoolManagementSystem.Application.csproj",
+        "projectName": "SchoolManagementSystem.Application",
+        "projectPath": "/home/tushar/SchoolManagementSystem/SchoolManagementSystem.Application/SchoolManagementSystem.Application.csproj",
+        "packagesPath": "/home/tushar/.nuget/packages/",
+        "outputPath": "/home/tushar/SchoolManagementSystem/SchoolManagementSystem.Application/obj/",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "/home/tushar/.nuget/NuGet/NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {
+              "/home/tushar/SchoolManagementSystem/SchoolManagementSystem.Domain/SchoolManagementSystem.Domain.csproj": {
+                "projectPath": "/home/tushar/SchoolManagementSystem/SchoolManagementSystem.Domain/SchoolManagementSystem.Domain.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        }
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "/usr/lib/dotnet/sdk/8.0.129/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "/home/tushar/SchoolManagementSystem/SchoolManagementSystem.Domain/SchoolManagementSystem.Domain.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "/home/tushar/SchoolManagementSystem/SchoolManagementSystem.Domain/SchoolManagementSystem.Domain.csproj",
+        "projectName": "SchoolManagementSystem.Domain",
+        "projectPath": "/home/tushar/SchoolManagementSystem/SchoolManagementSystem.Domain/SchoolManagementSystem.Domain.csproj",
+        "packagesPath": "/home/tushar/.nuget/packages/",
+        "outputPath": "/home/tushar/SchoolManagementSystem/SchoolManagementSystem.Domain/obj/",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "/home/tushar/.nuget/NuGet/NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {}
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        }
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "/usr/lib/dotnet/sdk/8.0.129/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "/home/tushar/SchoolManagementSystem/SchoolManagementSystem.Infrastructure/SchoolManagementSystem.Infrastructure.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "/home/tushar/SchoolManagementSystem/SchoolManagementSystem.Infrastructure/SchoolManagementSystem.Infrastructure.csproj",
+        "projectName": "SchoolManagementSystem.Infrastructure",
+        "projectPath": "/home/tushar/SchoolManagementSystem/SchoolManagementSystem.Infrastructure/SchoolManagementSystem.Infrastructure.csproj",
+        "packagesPath": "/home/tushar/.nuget/packages/",
+        "outputPath": "/home/tushar/SchoolManagementSystem/SchoolManagementSystem.Infrastructure/obj/",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "/home/tushar/.nuget/NuGet/NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {
+              "/home/tushar/SchoolManagementSystem/SchoolManagementSystem.Application/SchoolManagementSystem.Application.csproj": {
+                "projectPath": "/home/tushar/SchoolManagementSystem/SchoolManagementSystem.Application/SchoolManagementSystem.Application.csproj"
+              },
+              "/home/tushar/SchoolManagementSystem/SchoolManagementSystem.Domain/SchoolManagementSystem.Domain.csproj": {
+                "projectPath": "/home/tushar/SchoolManagementSystem/SchoolManagementSystem.Domain/SchoolManagementSystem.Domain.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        }
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "dependencies": {
+            "Microsoft.AspNetCore.Identity.EntityFrameworkCore": {
+              "target": "Package",
+              "version": "[8.0.0, )"
+            },
+            "Microsoft.EntityFrameworkCore.Design": {
+              "include": "Runtime, Build, Native, ContentFiles, Analyzers, BuildTransitive",
+              "suppressParent": "All",
+              "target": "Package",
+              "version": "[8.0.0, )"
+            },
+            "Microsoft.EntityFrameworkCore.Sqlite": {
+              "target": "Package",
+              "version": "[8.0.0, )"
+            },
+            "Microsoft.EntityFrameworkCore.Tools": {
+              "include": "Runtime, Build, Native, ContentFiles, Analyzers, BuildTransitive",
+              "suppressParent": "All",
+              "target": "Package",
+              "version": "[8.0.0, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "/usr/lib/dotnet/sdk/8.0.129/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    }
+  }
+}
