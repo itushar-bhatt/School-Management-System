@@ -76,6 +76,19 @@ namespace SchoolManagementSystem.API.Controllers
                 return BadRequest(new { message = "Invalid request" });
             }
 
+            // Restrict: Admin cannot create other Admin users
+            if (model.Role == "Admin")
+            {
+                return BadRequest(new { message = "Cannot create Admin users. Only Teachers, Students, and Parents can be created." });
+            }
+
+            // Validate role
+            var validRoles = new[] { "Student", "Teacher", "Parent" };
+            if (!validRoles.Contains(model.Role))
+            {
+                return BadRequest(new { message = "Invalid role. Allowed roles: Student, Teacher, Parent" });
+            }
+
             var user = new ApplicationUser
             {
                 UserName = model.Username,
@@ -98,6 +111,7 @@ namespace SchoolManagementSystem.API.Controllers
 
             return BadRequest(new { message = string.Join(", ", result.Errors.Select(e => e.Description)) });
         }
+
 
         [HttpDelete("users/{id}")]
         public async Task<IActionResult> DeleteUser(string id)
