@@ -27,7 +27,7 @@ namespace SchoolManagementSystem.Application.Services
             _studentParentRepository = studentParentRepository;
         }
 
-        public async Task<(bool Success, string Message, object Result)> AdmitStudentAsync(AdmissionRequest request)
+        public async Task<(bool Success, string Message, object? Result)> AdmitStudentAsync(AdmissionRequest request)
         {
             try
             {
