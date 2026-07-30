@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using SchoolManagementSystem.Application.DTOs;
 using SchoolManagementSystem.Application.Interfaces;
 using SchoolManagementSystem.Application.Services;
+using SchoolManagementSystem.Domain.Interfaces;
 using SchoolManagementSystem.Infrastructure.Identity;
 
 namespace SchoolManagementSystem.API.Controllers
@@ -16,15 +17,18 @@ namespace SchoolManagementSystem.API.Controllers
         private readonly IAdmissionService _admissionService;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly RoleManager<IdentityRole> _roleManager;
+        private readonly IParentRepository _parentRepository;
 
         public TeacherController(
             IAdmissionService admissionService,
             UserManager<ApplicationUser> userManager,
-            RoleManager<IdentityRole> roleManager)
+            RoleManager<IdentityRole> roleManager,
+            IParentRepository parentRepository)
         {
             _admissionService = admissionService;
             _userManager = userManager;
             _roleManager = roleManager;
+            _parentRepository = parentRepository;
         }
 
         [HttpGet("dashboard")]
@@ -74,6 +78,14 @@ namespace SchoolManagementSystem.API.Controllers
                 return BadRequest(new { message = "Invalid request" });
             }
 
+            // Check if parent with this phone already exists
+            var existingParent = await _parentRepository.GetByPhoneAsync(model.Phone);
+            if (existingParent != null)
+            {
+                return BadRequest(new { message = "Parent with this phone number already exists" });
+            }
+
+            // Create Identity user
             var user = new ApplicationUser
             {
                 UserName = model.Username,
@@ -87,12 +99,36 @@ namespace SchoolManagementSystem.API.Controllers
             if (result.Succeeded)
             {
                 // Assign Parent role
-                if (await _roleManager.RoleExistsAsync("Parent"))
+                if (!await _roleManager.RoleExistsAsync("Parent"))
                 {
-                    await _userManager.AddToRoleAsync(user, "Parent");
+                    await _roleManager.CreateAsync(new IdentityRole("Parent"));
                 }
+                await _userManager.AddToRoleAsync(user, "Parent");
 
-                return Ok(new { message = $"Parent '{model.Username}' created successfully" });
+                // Create Parent profile
+                var parent = new Domain.Entities.Parent
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    UserId = user.Id,
+                    Phone = model.Phone,
+                    Address = model.Address,
+                    Occupation = model.Occupation,
+                    CreatedAt = DateTime.UtcNow,
+                    IsActive = true
+                };
+
+                await _parentRepository.AddAsync(parent);
+
+                return Ok(new { 
+                    message = $"Parent '{model.Username}' created successfully",
+                    parent = new {
+                        parent.Id,
+                        parent.UserId,
+                        parent.Phone,
+                        user.UserName,
+                        user.FullName
+                    }
+                });
             }
 
             return BadRequest(new { message = string.Join(", ", result.Errors.Select(e => e.Description)) });
