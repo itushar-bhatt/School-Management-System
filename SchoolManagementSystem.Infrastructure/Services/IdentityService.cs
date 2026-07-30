@@ -50,18 +50,23 @@ namespace SchoolManagementSystem.Infrastructure.Services
             // Add user to role
             await _userManager.AddToRoleAsync(user, role);
 
-            // Create corresponding User entity in our custom table
-            var customUser = new User
+            // Check if User entity already exists in our custom table
+            var existingUser = await _context.Users.FindAsync(user.Id);
+            if (existingUser == null)
             {
-                Id = user.Id,
-                UserName = user.UserName ?? string.Empty,
-                Email = user.Email ?? string.Empty,
-                FullName = user.FullName ?? string.Empty,
-                Roles = new List<string> { role }
-            };
+                // Create corresponding User entity in our custom table
+                var customUser = new User
+                {
+                    Id = user.Id,
+                    UserName = user.UserName ?? string.Empty,
+                    Email = user.Email ?? string.Empty,
+                    FullName = user.FullName ?? string.Empty,
+                    Roles = new List<string> { role }
+                };
 
-            _context.Users.Add(customUser);
-            await _context.SaveChangesAsync();
+                _context.Users.Add(customUser);
+                await _context.SaveChangesAsync();
+            }
 
             return (true, "User created successfully", user.Id);
         }
