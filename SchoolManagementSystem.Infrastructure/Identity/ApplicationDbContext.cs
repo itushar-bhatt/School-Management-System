@@ -12,6 +12,7 @@ namespace SchoolManagementSystem.Infrastructure.Identity
         {
         }
 
+        public DbSet<User> Users { get; set; }
         public DbSet<Student> Students { get; set; }
         public DbSet<Parent> Parents { get; set; }
         public DbSet<StudentParent> StudentParents { get; set; }
@@ -19,6 +20,19 @@ namespace SchoolManagementSystem.Infrastructure.Identity
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
+
+            // User configuration (custom user table)
+            builder.Entity<User>()
+                .HasIndex(u => u.UserName)
+                .IsUnique();
+
+            builder.Entity<User>()
+                .Property(u => u.UserName)
+                .IsRequired();
+
+            builder.Entity<User>()
+                .Property(u => u.Email)
+                .IsRequired();
 
             // Student configuration
             builder.Entity<Student>()

@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Identity;
 using SchoolManagementSystem.Application.Interfaces;
+using SchoolManagementSystem.Domain.Entities;
 using SchoolManagementSystem.Infrastructure.Identity;
 
 namespace SchoolManagementSystem.Infrastructure.Services
@@ -11,13 +12,16 @@ namespace SchoolManagementSystem.Infrastructure.Services
     {
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly RoleManager<IdentityRole> _roleManager;
+        private readonly ApplicationDbContext _context;
 
         public IdentityService(
             UserManager<ApplicationUser> userManager,
-            RoleManager<IdentityRole> roleManager)
+            RoleManager<IdentityRole> roleManager,
+            ApplicationDbContext context)
         {
             _userManager = userManager;
             _roleManager = roleManager;
+            _context = context;
         }
 
         public async Task<(bool Success, string Message, string UserId)> CreateUserAsync(
@@ -45,6 +49,19 @@ namespace SchoolManagementSystem.Infrastructure.Services
 
             // Add user to role
             await _userManager.AddToRoleAsync(user, role);
+
+            // Create corresponding User entity in our custom table
+            var customUser = new User
+            {
+                Id = user.Id,
+                UserName = user.UserName ?? string.Empty,
+                Email = user.Email ?? string.Empty,
+                FullName = user.FullName ?? string.Empty,
+                Roles = new List<string> { role }
+            };
+
+            _context.Users.Add(customUser);
+            await _context.SaveChangesAsync();
 
             return (true, "User created successfully", user.Id);
         }

@@ -10,8 +10,6 @@ namespace SchoolManagementSystem.Domain.Entities
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public bool IsActive { get; set; } = true;
         
-        // Navigation properties
-        public virtual User? User { get; set; }
         public virtual ICollection<StudentParent> StudentParents { get; set; } = new List<StudentParent>();
     }
 }

@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SchoolManagementSystem.Infrastructure.Identity;
 
@@ -10,9 +11,11 @@ using SchoolManagementSystem.Infrastructure.Identity;
 namespace SchoolManagementSystem.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260730111948_AddUserTable")]
+    partial class AddUserTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.0");
@@ -170,9 +173,17 @@ namespace SchoolManagementSystem.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("UserId1")
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Phone")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("UserId1")
                         .IsUnique();
 
                     b.ToTable("Parents");
@@ -205,9 +216,17 @@ namespace SchoolManagementSystem.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("UserId1")
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
 
                     b.HasIndex("AdmissionNo")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("UserId1")
                         .IsUnique();
 
                     b.ToTable("Students");
@@ -222,13 +241,23 @@ namespace SchoolManagementSystem.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("ParentId1")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("StudentId")
                         .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("StudentId1")
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
                     b.HasIndex("ParentId");
+
+                    b.HasIndex("ParentId1");
+
+                    b.HasIndex("StudentId1");
 
                     b.HasIndex("StudentId", "ParentId")
                         .IsUnique();
@@ -395,19 +424,57 @@ namespace SchoolManagementSystem.Infrastructure.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("SchoolManagementSystem.Domain.Entities.Parent", b =>
+                {
+                    b.HasOne("SchoolManagementSystem.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SchoolManagementSystem.Domain.Entities.User", null)
+                        .WithOne("Parent")
+                        .HasForeignKey("SchoolManagementSystem.Domain.Entities.Parent", "UserId1");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("SchoolManagementSystem.Domain.Entities.Student", b =>
+                {
+                    b.HasOne("SchoolManagementSystem.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SchoolManagementSystem.Domain.Entities.User", null)
+                        .WithOne("Student")
+                        .HasForeignKey("SchoolManagementSystem.Domain.Entities.Student", "UserId1");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("SchoolManagementSystem.Domain.Entities.StudentParent", b =>
                 {
                     b.HasOne("SchoolManagementSystem.Domain.Entities.Parent", "Parent")
-                        .WithMany("StudentParents")
+                        .WithMany()
                         .HasForeignKey("ParentId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("SchoolManagementSystem.Domain.Entities.Student", "Student")
+                    b.HasOne("SchoolManagementSystem.Domain.Entities.Parent", null)
                         .WithMany("StudentParents")
+                        .HasForeignKey("ParentId1");
+
+                    b.HasOne("SchoolManagementSystem.Domain.Entities.Student", "Student")
+                        .WithMany()
                         .HasForeignKey("StudentId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("SchoolManagementSystem.Domain.Entities.Student", null)
+                        .WithMany("StudentParents")
+                        .HasForeignKey("StudentId1");
 
                     b.Navigation("Parent");
 
@@ -422,6 +489,13 @@ namespace SchoolManagementSystem.Infrastructure.Migrations
             modelBuilder.Entity("SchoolManagementSystem.Domain.Entities.Student", b =>
                 {
                     b.Navigation("StudentParents");
+                });
+
+            modelBuilder.Entity("SchoolManagementSystem.Domain.Entities.User", b =>
+                {
+                    b.Navigation("Parent");
+
+                    b.Navigation("Student");
                 });
 #pragma warning restore 612, 618
         }
