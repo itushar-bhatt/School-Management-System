@@ -5,6 +5,6 @@ namespace SchoolManagementSystem.Application.Interfaces
 {
     public interface IAdmissionService
     {
-        Task<(bool Success, string Message, object? Result)> AdmitStudentAsync(AdmissionRequest request);
+        Task<(bool Success, string Message, object Result)> AdmitStudentAsync(AdmissionRequest request);
     }
 }
