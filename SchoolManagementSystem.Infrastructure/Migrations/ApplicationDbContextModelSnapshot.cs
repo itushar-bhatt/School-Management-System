@@ -236,41 +236,6 @@ namespace SchoolManagementSystem.Infrastructure.Migrations
                     b.ToTable("StudentParents");
                 });
 
-            modelBuilder.Entity("SchoolManagementSystem.Domain.Entities.User", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Class")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Email")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("FullName")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Roles")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Section")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("UserName")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserName")
-                        .IsUnique();
-
-                    b.ToTable("Users");
-                });
-
             modelBuilder.Entity("SchoolManagementSystem.Infrastructure.Identity.ApplicationUser", b =>
                 {
                     b.Property<string>("Id")

@@ -11,8 +11,8 @@ using SchoolManagementSystem.Infrastructure.Identity;
 namespace SchoolManagementSystem.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260730071311_AddStudentParentTables")]
-    partial class AddStudentParentTables
+    [Migration("20260730130816_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -178,9 +178,6 @@ namespace SchoolManagementSystem.Infrastructure.Migrations
                     b.HasIndex("Phone")
                         .IsUnique();
 
-                    b.HasIndex("UserId")
-                        .IsUnique();
-
                     b.ToTable("Parents");
                 });
 
@@ -216,9 +213,6 @@ namespace SchoolManagementSystem.Infrastructure.Migrations
                     b.HasIndex("AdmissionNo")
                         .IsUnique();
 
-                    b.HasIndex("UserId")
-                        .IsUnique();
-
                     b.ToTable("Students");
                 });
 
@@ -243,38 +237,6 @@ namespace SchoolManagementSystem.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("StudentParents");
-                });
-
-            modelBuilder.Entity("SchoolManagementSystem.Domain.Entities.User", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Class")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Email")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("FullName")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Roles")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Section")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("UserName")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("User");
                 });
 
             modelBuilder.Entity("SchoolManagementSystem.Infrastructure.Identity.ApplicationUser", b =>
@@ -401,28 +363,6 @@ namespace SchoolManagementSystem.Infrastructure.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("SchoolManagementSystem.Domain.Entities.Parent", b =>
-                {
-                    b.HasOne("SchoolManagementSystem.Domain.Entities.User", "User")
-                        .WithOne("Parent")
-                        .HasForeignKey("SchoolManagementSystem.Domain.Entities.Parent", "UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("SchoolManagementSystem.Domain.Entities.Student", b =>
-                {
-                    b.HasOne("SchoolManagementSystem.Domain.Entities.User", "User")
-                        .WithOne("Student")
-                        .HasForeignKey("SchoolManagementSystem.Domain.Entities.Student", "UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("SchoolManagementSystem.Domain.Entities.StudentParent", b =>
                 {
                     b.HasOne("SchoolManagementSystem.Domain.Entities.Parent", "Parent")
@@ -450,13 +390,6 @@ namespace SchoolManagementSystem.Infrastructure.Migrations
             modelBuilder.Entity("SchoolManagementSystem.Domain.Entities.Student", b =>
                 {
                     b.Navigation("StudentParents");
-                });
-
-            modelBuilder.Entity("SchoolManagementSystem.Domain.Entities.User", b =>
-                {
-                    b.Navigation("Parent");
-
-                    b.Navigation("Student");
                 });
 #pragma warning restore 612, 618
         }
