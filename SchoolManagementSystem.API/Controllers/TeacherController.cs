@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using SchoolManagementSystem.Application.DTOs;
+using SchoolManagementSystem.Application.Interfaces;
+using SchoolManagementSystem.Application.Services;
 using SchoolManagementSystem.Infrastructure.Identity;
 
 namespace SchoolManagementSystem.API.Controllers
@@ -11,13 +13,16 @@ namespace SchoolManagementSystem.API.Controllers
     [Authorize(Roles = "Teacher")]
     public class TeacherController : ControllerBase
     {
+        private readonly IAdmissionService _admissionService;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly RoleManager<IdentityRole> _roleManager;
 
         public TeacherController(
+            IAdmissionService admissionService,
             UserManager<ApplicationUser> userManager,
             RoleManager<IdentityRole> roleManager)
         {
+            _admissionService = admissionService;
             _userManager = userManager;
             _roleManager = roleManager;
         }
@@ -37,77 +42,28 @@ namespace SchoolManagementSystem.API.Controllers
                     "Mark attendance",
                     "Enter grades and marks",
                     "Create assignments and tests",
-                    "Create students and parents",
-                    "Link students with parents"
+                    "Admit new students with parents",
+                    "View students and parents"
                 }
             });
         }
 
-        [HttpPost("users/student")]
-        public async Task<IActionResult> CreateStudent([FromBody] CreateStudentRequest model)
+        [HttpPost("admit-student")]
+        public async Task<IActionResult> AdmitStudent([FromBody] AdmissionRequest request)
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest(new { message = "Invalid request" });
             }
 
-            var user = new ApplicationUser
+            var (success, message, result) = await _admissionService.AdmitStudentAsync(request);
+
+            if (success)
             {
-                UserName = model.Username,
-                Email = model.Email,
-                FullName = model.FullName,
-                EmailConfirmed = true,
-                Class = model.Class,
-                Section = model.Section
-            };
-
-            var result = await _userManager.CreateAsync(user, model.Password);
-
-            if (result.Succeeded)
-            {
-                // Assign Student role
-                if (await _roleManager.RoleExistsAsync("Student"))
-                {
-                    await _userManager.AddToRoleAsync(user, "Student");
-                }
-
-                // If parent creation requested, create and link parent
-                if (model.CreateParent && 
-                    !string.IsNullOrEmpty(model.ParentUsername) && 
-                    !string.IsNullOrEmpty(model.ParentPassword))
-                {
-                    var parent = new ApplicationUser
-                    {
-                        UserName = model.ParentUsername,
-                        Email = model.ParentEmail ?? string.Empty,
-                        FullName = model.ParentFullName ?? model.ParentUsername,
-                        EmailConfirmed = true
-                    };
-
-                    var parentResult = await _userManager.CreateAsync(parent, model.ParentPassword);
-
-                    if (parentResult.Succeeded)
-                    {
-                        if (await _roleManager.RoleExistsAsync("Parent"))
-                        {
-                            await _userManager.AddToRoleAsync(parent, "Parent");
-                        }
-
-                        return Ok(new { 
-                            message = "Student created successfully and linked with parent",
-                            student = new { user.Id, user.UserName, user.FullName, user.Class, user.Section },
-                            parent = new { parent.Id, parent.UserName, parent.FullName }
-                        });
-                    }
-                }
-
-                return Ok(new { 
-                    message = $"Student '{model.Username}' created successfully",
-                    student = new { user.Id, user.UserName, user.FullName, user.Class, user.Section }
-                });
+                return Ok(new { message, result });
             }
 
-            return BadRequest(new { message = string.Join(", ", result.Errors.Select(e => e.Description)) });
+            return BadRequest(new { message });
         }
 
         [HttpPost("users/parent")]

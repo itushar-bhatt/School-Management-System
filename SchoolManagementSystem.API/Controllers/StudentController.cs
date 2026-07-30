@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SchoolManagementSystem.Application.DTOs;
+using SchoolManagementSystem.Application.Interfaces;
 
 namespace SchoolManagementSystem.API.Controllers
 {
@@ -8,23 +10,25 @@ namespace SchoolManagementSystem.API.Controllers
     [Authorize(Roles = "Student")]
     public class StudentController : ControllerBase
     {
-        [HttpGet("dashboard")]
-        public IActionResult GetStudentDashboard()
+        private readonly IStudentDashboardService _studentDashboardService;
+
+        public StudentController(IStudentDashboardService studentDashboardService)
         {
-            return Ok(new
+            _studentDashboardService = studentDashboardService;
+        }
+
+        [HttpGet("dashboard")]
+        public async Task<IActionResult> GetStudentDashboard()
+        {
+            var userId = User.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")?.Value;
+            
+            if (string.IsNullOrEmpty(userId))
             {
-                message = "Hello Student!",
-                username = User.Identity.Name,
-                role = "Student",
-                features = new[]
-                {
-                    "View class schedule",
-                    "Check assignments and homework",
-                    "View grades and report cards",
-                    "Check attendance records",
-                    "Access study materials"
-                }
-            });
+                return Unauthorized(new { message = "User not authenticated" });
+            }
+
+            var dashboard = await _studentDashboardService.GetDashboardAsync(userId);
+            return Ok(dashboard);
         }
     }
 }

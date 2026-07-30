@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SchoolManagementSystem.Application.DTOs;
+using SchoolManagementSystem.Application.Interfaces;
 
 namespace SchoolManagementSystem.API.Controllers
 {
@@ -8,23 +10,25 @@ namespace SchoolManagementSystem.API.Controllers
     [Authorize(Roles = "Parent")]
     public class ParentController : ControllerBase
     {
-        [HttpGet("dashboard")]
-        public IActionResult GetParentDashboard()
+        private readonly IParentDashboardService _parentDashboardService;
+
+        public ParentController(IParentDashboardService parentDashboardService)
         {
-            return Ok(new
+            _parentDashboardService = parentDashboardService;
+        }
+
+        [HttpGet("dashboard")]
+        public async Task<IActionResult> GetParentDashboard()
+        {
+            var userId = User.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")?.Value;
+            
+            if (string.IsNullOrEmpty(userId))
             {
-                message = "Hello Parent!",
-                username = User.Identity.Name,
-                role = "Parent",
-                features = new[]
-                {
-                    "View children's information",
-                    "Check attendance records",
-                    "View grades and report cards",
-                    "Communicate with teachers",
-                    "View school announcements"
-                }
-            });
+                return Unauthorized(new { message = "User not authenticated" });
+            }
+
+            var dashboard = await _parentDashboardService.GetDashboardAsync(userId);
+            return Ok(dashboard);
         }
     }
 }

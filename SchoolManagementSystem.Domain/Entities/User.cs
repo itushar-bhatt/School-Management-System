@@ -11,5 +11,9 @@ namespace SchoolManagementSystem.Domain.Entities
         // Student-specific properties
         public string? Class { get; set; }
         public string? Section { get; set; }
+        
+        // Navigation properties
+        public virtual Student? Student { get; set; }
+        public virtual Parent? Parent { get; set; }
     }
 }

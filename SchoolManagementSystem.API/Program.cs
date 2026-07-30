@@ -1,6 +1,11 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using SchoolManagementSystem.Application.Interfaces;
+using SchoolManagementSystem.Application.Services;
+using SchoolManagementSystem.Domain.Interfaces;
 using SchoolManagementSystem.Infrastructure.Identity;
+using SchoolManagementSystem.Infrastructure.Repositories;
+using SchoolManagementSystem.Infrastructure.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -89,6 +94,18 @@ builder.Services.ConfigureApplicationCookie(options =>
 
 // Add authorization
 builder.Services.AddAuthorization();
+
+// Register Application Services
+builder.Services.AddScoped<IIdentityService, IdentityService>();
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IAdmissionService, AdmissionService>();
+builder.Services.AddScoped<IParentDashboardService, ParentDashboardService>();
+builder.Services.AddScoped<IStudentDashboardService, StudentDashboardService>();
+
+// Register Repositories
+builder.Services.AddScoped<IStudentRepository, StudentRepository>();
+builder.Services.AddScoped<IParentRepository, ParentRepository>();
+builder.Services.AddScoped<IStudentParentRepository, StudentParentRepository>();
 
 var app = builder.Build();
 
