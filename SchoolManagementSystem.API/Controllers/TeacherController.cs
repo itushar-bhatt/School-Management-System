@@ -18,17 +18,23 @@ namespace SchoolManagementSystem.API.Controllers
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly RoleManager<IdentityRole> _roleManager;
         private readonly IParentRepository _parentRepository;
+        private readonly IStudentRepository _studentRepository;
+        private readonly IStudentParentRepository _studentParentRepository;
 
         public TeacherController(
             IAdmissionService admissionService,
             UserManager<ApplicationUser> userManager,
             RoleManager<IdentityRole> roleManager,
-            IParentRepository parentRepository)
+            IParentRepository parentRepository,
+            IStudentRepository studentRepository,
+            IStudentParentRepository studentParentRepository)
         {
             _admissionService = admissionService;
             _userManager = userManager;
             _roleManager = roleManager;
             _parentRepository = parentRepository;
+            _studentRepository = studentRepository;
+            _studentParentRepository = studentParentRepository;
         }
 
         [HttpGet("dashboard")]
@@ -142,84 +148,108 @@ namespace SchoolManagementSystem.API.Controllers
                 return BadRequest(new { message = "Invalid request" });
             }
 
-            // Verify student exists
-            var student = await _userManager.FindByIdAsync(model.StudentId);
+            // Verify student exists in Students table
+            var student = await _studentRepository.GetByIdAsync(model.StudentId);
             if (student == null)
             {
                 return NotFound(new { message = "Student not found" });
             }
 
-            // Verify parent exists
-            var parent = await _userManager.FindByIdAsync(model.ParentId);
+            // Verify parent exists in Parents table
+            var parent = await _parentRepository.GetByIdAsync(model.ParentId);
             if (parent == null)
             {
                 return NotFound(new { message = "Parent not found" });
             }
 
-            // Verify user roles
-            var studentRoles = await _userManager.GetRolesAsync(student);
-            var parentRoles = await _userManager.GetRolesAsync(parent);
-
-            if (!studentRoles.Contains("Student"))
+            // Check if link already exists
+            var linkExists = await _studentParentRepository.ExistsAsync(model.StudentId, model.ParentId);
+            if (linkExists)
             {
-                return BadRequest(new { message = "User is not a Student" });
+                return BadRequest(new { message = "Student is already linked with this parent" });
             }
 
-            if (!parentRoles.Contains("Parent"))
+            // Create the link
+            var studentParent = new Domain.Entities.StudentParent
             {
-                return BadRequest(new { message = "User is not a Parent" });
-            }
+                Id = Guid.NewGuid().ToString(),
+                StudentId = model.StudentId,
+                ParentId = model.ParentId
+            };
 
-            // Create link (in a real app, you'd save this to a database table)
-            // For now, we'll just return success
-            // TODO: Implement StudentParent repository and save to database
-            
+            await _studentParentRepository.AddAsync(studentParent);
+
+            // Get user details for response
+            var studentUser = await _userManager.FindByIdAsync(student.UserId);
+            var parentUser = await _userManager.FindByIdAsync(parent.UserId);
+
             return Ok(new { 
                 message = "Student linked with parent successfully",
-                student = new { student.Id, student.UserName, student.FullName, student.Class, student.Section },
-                parent = new { parent.Id, parent.UserName, parent.FullName }
+                student = new { 
+                    student.Id, 
+                    student.AdmissionNo, 
+                    student.Class, 
+                    student.Section,
+                    UserName = studentUser?.UserName,
+                    FullName = studentUser?.FullName
+                },
+                parent = new { 
+                    parent.Id, 
+                    parent.Phone,
+                    UserName = parentUser?.UserName,
+                    FullName = parentUser?.FullName
+                }
             });
         }
 
         [HttpGet("students")]
         public async Task<IActionResult> GetStudents([FromQuery] string? className, [FromQuery] string? section)
         {
-            // Get all users with Student role
-            var students = new List<ApplicationUser>();
-            
-            // Get all users and filter by Student role
-            var allUsers = _userManager.Users.ToList();
-            
-            foreach (var user in allUsers)
+            // Get students from Students table (not AspNetUsers)
+            IEnumerable<Domain.Entities.Student> students;
+
+            if (!string.IsNullOrEmpty(className) && !string.IsNullOrEmpty(section))
             {
-                var roles = await _userManager.GetRolesAsync(user);
-                if (roles.Contains("Student"))
+                // Search by both class and section
+                students = await _studentRepository.GetByClassAndSectionAsync(className, section);
+            }
+            else if (!string.IsNullOrEmpty(className))
+            {
+                // Search by class only
+                var allStudents = await _studentRepository.GetAllAsync();
+                students = allStudents.Where(s => s.Class == className);
+            }
+            else if (!string.IsNullOrEmpty(section))
+            {
+                // Search by section only
+                var allStudents = await _studentRepository.GetAllAsync();
+                students = allStudents.Where(s => s.Section == section);
+            }
+            else
+            {
+                // Get all students
+                students = await _studentRepository.GetAllAsync();
+            }
+
+            // Join with UserManager to get user details
+            var result = new List<object>();
+            foreach (var student in students)
+            {
+                var user = await _userManager.FindByIdAsync(student.UserId);
+                result.Add(new
                 {
-                    students.Add(user);
-                }
+                    id = student.Id,
+                    userId = student.UserId,
+                    admissionNo = student.AdmissionNo,
+                    class_ = student.Class,
+                    section = student.Section,
+                    admissionDate = student.AdmissionDate,
+                    isActive = student.IsActive,
+                    username = user?.UserName,
+                    fullName = user?.FullName,
+                    email = user?.Email
+                });
             }
-
-            // Apply filters
-            if (!string.IsNullOrEmpty(className))
-            {
-                students = students.Where(s => s.Class == className).ToList();
-            }
-            
-            if (!string.IsNullOrEmpty(section))
-            {
-                students = students.Where(s => s.Section == section).ToList();
-            }
-
-            // Return filtered students
-            var result = students.Select(s => new
-            {
-                id = s.Id,
-                username = s.UserName,
-                fullName = s.FullName,
-                email = s.Email,
-                class_ = s.Class,
-                section = s.Section
-            });
 
             return Ok(result);
         }
@@ -227,29 +257,26 @@ namespace SchoolManagementSystem.API.Controllers
         [HttpGet("parents")]
         public async Task<IActionResult> GetParents()
         {
-            // Get all users with Parent role
-            var parents = new List<ApplicationUser>();
-            
-            // Get all users and filter by Parent role
-            var allUsers = _userManager.Users.ToList();
-            
-            foreach (var user in allUsers)
-            {
-                var roles = await _userManager.GetRolesAsync(user);
-                if (roles.Contains("Parent"))
-                {
-                    parents.Add(user);
-                }
-            }
+            // Get all parents from Parents table
+            var parents = await _parentRepository.GetAllAsync();
 
-            // Return parents
-            var result = parents.Select(p => new
+            // Join with UserManager to get user details
+            var result = new List<object>();
+            foreach (var parent in parents)
             {
-                id = p.Id,
-                username = p.UserName,
-                fullName = p.FullName,
-                email = p.Email
-            });
+                var user = await _userManager.FindByIdAsync(parent.UserId);
+                result.Add(new
+                {
+                    id = parent.Id,
+                    userId = parent.UserId,
+                    phone = parent.Phone,
+                    address = parent.Address,
+                    occupation = parent.Occupation,
+                    username = user?.UserName,
+                    fullName = user?.FullName,
+                    email = user?.Email
+                });
+            }
 
             return Ok(result);
         }
@@ -257,41 +284,31 @@ namespace SchoolManagementSystem.API.Controllers
         [HttpGet("classes")]
         public async Task<IActionResult> GetClasses()
         {
-            // Get all students
-            var allUsers = _userManager.Users.ToList();
-            var classes = new HashSet<string>();
-            
-            foreach (var user in allUsers)
-            {
-                var roles = await _userManager.GetRolesAsync(user);
-                if (roles.Contains("Student") && !string.IsNullOrEmpty(user.Class))
-                {
-                    classes.Add(user.Class);
-                }
-            }
+            // Get all students and extract unique classes
+            var students = await _studentRepository.GetAllAsync();
+            var classes = students
+                .Where(s => !string.IsNullOrEmpty(s.Class))
+                .Select(s => s.Class)
+                .Distinct()
+                .OrderBy(c => c)
+                .ToList();
 
-            // Return unique classes
-            return Ok(classes.OrderBy(c => c).ToList());
+            return Ok(classes);
         }
 
         [HttpGet("classes/{className}/sections")]
         public async Task<IActionResult> GetSections(string className)
         {
-            // Get all students in the specified class
-            var allUsers = _userManager.Users.ToList();
-            var sections = new HashSet<string>();
-            
-            foreach (var user in allUsers)
-            {
-                var roles = await _userManager.GetRolesAsync(user);
-                if (roles.Contains("Student") && user.Class == className && !string.IsNullOrEmpty(user.Section))
-                {
-                    sections.Add(user.Section);
-                }
-            }
+            // Get all students and extract unique sections for the specified class
+            var students = await _studentRepository.GetAllAsync();
+            var sections = students
+                .Where(s => s.Class == className && !string.IsNullOrEmpty(s.Section))
+                .Select(s => s.Section)
+                .Distinct()
+                .OrderBy(s => s)
+                .ToList();
 
-            // Return unique sections
-            return Ok(sections.OrderBy(s => s).ToList());
+            return Ok(sections);
         }
     }
 }
