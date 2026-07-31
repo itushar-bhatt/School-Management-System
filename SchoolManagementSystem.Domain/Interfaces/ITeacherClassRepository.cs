@@ -15,5 +15,6 @@ namespace SchoolManagementSystem.Domain.Interfaces
         Task DeleteAsync(string id);
         Task DeleteByTeacherIdAsync(string teacherId);
         Task<bool> ExistsAsync(string teacherId, string className, string? section);
+        Task ReplaceByTeacherIdAsync(string teacherId, IEnumerable<TeacherClass> newAssignments);
     }
 }

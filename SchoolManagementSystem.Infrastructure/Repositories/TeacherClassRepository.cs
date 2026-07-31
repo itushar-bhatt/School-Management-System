@@ -77,5 +77,19 @@ namespace SchoolManagementSystem.Infrastructure.Repositories
                                tc.Section == section && 
                                tc.IsActive);
         }
+
+        public async Task ReplaceByTeacherIdAsync(string teacherId, IEnumerable<TeacherClass> newAssignments)
+        {
+            // Delete all existing assignments for this teacher
+            var existingAssignments = await _context.TeacherClasses
+                .Where(tc => tc.TeacherId == teacherId)
+                .ToListAsync();
+            
+            _context.TeacherClasses.RemoveRange(existingAssignments);
+            
+            // Add new assignments
+            await _context.TeacherClasses.AddRangeAsync(newAssignments);
+            await _context.SaveChangesAsync();
+        }
     }
 }

@@ -41,15 +41,15 @@ namespace SchoolManagementSystem.API.Controllers
                 role = "Admin",
                 features = new[]
                 {
-                    "Add new users (Teachers, Students, Parents)",
-                    "Manage all users",
-                    "Delete users",
-                    "View all roles",
-                    "Assign classes to teachers",
-                    "Manage teacher class assignments"
+                    "Create teachers with class assignments",
+                    "Manage teacher class assignments",
+                    "View all users",
+                    "Delete users"
                 }
             });
         }
+
+        // ============ USER MANAGEMENT ============
 
         [HttpGet("users")]
         public async Task<IActionResult> GetAllUsers()
@@ -72,53 +72,6 @@ namespace SchoolManagementSystem.API.Controllers
 
             return Ok(userViewModels);
         }
-
-        [HttpPost("users")]
-        public async Task<IActionResult> AddUser([FromBody] AddUserRequest model)
-        {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(new { message = "Invalid request" });
-            }
-
-            // Restrict: Admin cannot create other Admin users
-            if (model.Role == "Admin")
-            {
-                return BadRequest(new { message = "Cannot create Admin users. Only Teachers, Students, and Parents can be created." });
-            }
-
-            // Validate role
-            var validRoles = new[] { "Student", "Teacher", "Parent" };
-            if (!validRoles.Contains(model.Role))
-            {
-                return BadRequest(new { message = "Invalid role. Allowed roles: Student, Teacher, Parent" });
-            }
-
-            var user = new ApplicationUser
-            {
-                UserName = model.Username,
-                Email = model.Email,
-                FullName = model.FullName,
-                EmailConfirmed = true
-            };
-
-            var result = await _userManager.CreateAsync(user, model.Password);
-
-            if (result.Succeeded)
-            {
-                if (!await _roleManager.RoleExistsAsync(model.Role))
-                {
-                    await _roleManager.CreateAsync(new IdentityRole(model.Role));
-                }
-                await _userManager.AddToRoleAsync(user, model.Role);
-
-                return Ok(new { message = $"User '{model.Username}' created successfully with role '{model.Role}'" });
-            }
-
-            return BadRequest(new { message = string.Join(", ", result.Errors.Select(e => e.Description)) });
-        }
-
-        // ============ TEACHER CLASS ASSIGNMENT ENDPOINTS ============
 
         // Create teacher WITH class assignments at registration time
         [HttpPost("users/teacher")]
@@ -153,29 +106,24 @@ namespace SchoolManagementSystem.API.Controllers
                 var assignedClasses = new List<object>();
                 foreach (var assignment in model.ClassAssignments)
                 {
-                    // Check if assignment already exists
-                    var exists = await _teacherClassRepository.ExistsAsync(user.Id, assignment.Class, assignment.Section);
-                    if (!exists)
+                    var teacherClass = new TeacherClass
                     {
-                        var teacherClass = new TeacherClass
-                        {
-                            Id = Guid.NewGuid().ToString(),
-                            TeacherId = user.Id,
-                            Class = assignment.Class,
-                            Section = assignment.Section,
-                            AssignedDate = DateTime.UtcNow,
-                            IsActive = true
-                        };
+                        Id = Guid.NewGuid().ToString(),
+                        TeacherId = user.Id,
+                        Class = assignment.Class,
+                        Section = assignment.Section,
+                        AssignedDate = DateTime.UtcNow,
+                        IsActive = true
+                    };
 
-                        await _teacherClassRepository.AddAsync(teacherClass);
+                    await _teacherClassRepository.AddAsync(teacherClass);
 
-                        assignedClasses.Add(new
-                        {
-                            teacherClass.Id,
-                            teacherClass.Class,
-                            teacherClass.Section
-                        });
-                    }
+                    assignedClasses.Add(new
+                    {
+                        teacherClass.Id,
+                        teacherClass.Class,
+                        teacherClass.Section
+                    });
                 }
 
                 return Ok(new
@@ -195,139 +143,38 @@ namespace SchoolManagementSystem.API.Controllers
             return BadRequest(new { message = string.Join(", ", result.Errors.Select(e => e.Description)) });
         }
 
-        // Assign a new class to an existing teacher
-        [HttpPost("teachers/{teacherId}/classes")]
-        public async Task<IActionResult> AssignClassToTeacher(string teacherId, [FromBody] AssignClassRequest model)
+        // Delete any user
+        [HttpDelete("users/{id}")]
+        public async Task<IActionResult> DeleteUser(string id)
         {
-            if (!ModelState.IsValid)
+            var user = await _userManager.FindByIdAsync(id);
+            if (user == null)
             {
-                return BadRequest(new { message = "Invalid request" });
+                return NotFound(new { message = "User not found" });
             }
 
-            // Verify teacher exists
-            var teacher = await _userManager.FindByIdAsync(teacherId);
-            if (teacher == null)
+            // If user is a teacher, delete their class assignments too
+            var roles = await _userManager.GetRolesAsync(user);
+            if (roles.Contains("Teacher"))
             {
-                return NotFound(new { message = "Teacher not found" });
+                await _teacherClassRepository.DeleteByTeacherIdAsync(id);
             }
 
-            // Verify user is a teacher
-            var roles = await _userManager.GetRolesAsync(teacher);
-            if (!roles.Contains("Teacher"))
+            var result = await _userManager.DeleteAsync(user);
+            if (result.Succeeded)
             {
-                return BadRequest(new { message = "User is not a Teacher" });
+                return Ok(new { message = "User deleted successfully" });
             }
 
-            // Check if assignment already exists
-            var exists = await _teacherClassRepository.ExistsAsync(teacherId, model.Class, model.Section);
-            if (exists)
-            {
-                return BadRequest(new { message = "This class assignment already exists for this teacher" });
-            }
-
-            // Create new assignment
-            var teacherClass = new TeacherClass
-            {
-                Id = Guid.NewGuid().ToString(),
-                TeacherId = teacherId,
-                Class = model.Class,
-                Section = model.Section,
-                AssignedDate = DateTime.UtcNow,
-                IsActive = true
-            };
-
-            await _teacherClassRepository.AddAsync(teacherClass);
-
-            return Ok(new
-            {
-                message = "Class assigned to teacher successfully",
-                assignment = new
-                {
-                    teacherClass.Id,
-                    teacherClass.TeacherId,
-                    teacherClass.Class,
-                    teacherClass.Section,
-                    teacherClass.AssignedDate
-                }
-            });
+            return BadRequest(new { message = "Failed to delete user" });
         }
 
-        // Update/reassign a class assignment
-        [HttpPut("teachers/{teacherId}/classes/{assignmentId}")]
-        public async Task<IActionResult> UpdateTeacherClassAssignment(string teacherId, string assignmentId, [FromBody] AssignClassRequest model)
-        {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(new { message = "Invalid request" });
-            }
-
-            // Get the assignment
-            var assignment = await _teacherClassRepository.GetByIdAsync(assignmentId);
-            if (assignment == null)
-            {
-                return NotFound(new { message = "Class assignment not found" });
-            }
-
-            // Verify the assignment belongs to the specified teacher
-            if (assignment.TeacherId != teacherId)
-            {
-                return BadRequest(new { message = "This assignment does not belong to the specified teacher" });
-            }
-
-            // Check if the new class/section combination already exists for this teacher (excluding current)
-            var exists = await _teacherClassRepository.ExistsAsync(teacherId, model.Class, model.Section);
-            if (exists && assignment.Class != model.Class || assignment.Section != model.Section)
-            {
-                return BadRequest(new { message = "This class assignment already exists for this teacher" });
-            }
-
-            // Update the assignment
-            assignment.Class = model.Class;
-            assignment.Section = model.Section;
-
-            await _teacherClassRepository.UpdateAsync(assignment);
-
-            return Ok(new
-            {
-                message = "Class assignment updated successfully",
-                assignment = new
-                {
-                    assignment.Id,
-                    assignment.TeacherId,
-                    assignment.Class,
-                    assignment.Section,
-                    assignment.AssignedDate
-                }
-            });
-        }
-
-        // Delete a class assignment
-        [HttpDelete("teachers/{teacherId}/classes/{assignmentId}")]
-        public async Task<IActionResult> DeleteTeacherClassAssignment(string teacherId, string assignmentId)
-        {
-            // Get the assignment
-            var assignment = await _teacherClassRepository.GetByIdAsync(assignmentId);
-            if (assignment == null)
-            {
-                return NotFound(new { message = "Class assignment not found" });
-            }
-
-            // Verify the assignment belongs to the specified teacher
-            if (assignment.TeacherId != teacherId)
-            {
-                return BadRequest(new { message = "This assignment does not belong to the specified teacher" });
-            }
-
-            await _teacherClassRepository.DeleteAsync(assignmentId);
-
-            return Ok(new { message = "Class assignment deleted successfully" });
-        }
+        // ============ TEACHER CLASS ASSIGNMENT MANAGEMENT ============
 
         // Get all classes assigned to a teacher
         [HttpGet("teachers/{teacherId}/classes")]
         public async Task<IActionResult> GetTeacherClasses(string teacherId)
         {
-            // Verify teacher exists
             var teacher = await _userManager.FindByIdAsync(teacherId);
             if (teacher == null)
             {
@@ -349,30 +196,54 @@ namespace SchoolManagementSystem.API.Controllers
             return Ok(result);
         }
 
-        [HttpDelete("users/{id}")]
-        public async Task<IActionResult> DeleteUser(string id)
+        // Replace ALL class assignments for a teacher (bulk update)
+        [HttpPut("teachers/{teacherId}/classes")]
+        public async Task<IActionResult> ReplaceTeacherClasses(string teacherId, [FromBody] List<AssignClassRequest> assignments)
         {
-            var user = await _userManager.FindByIdAsync(id);
-            if (user == null)
+            if (!ModelState.IsValid)
             {
-                return NotFound(new { message = "User not found" });
+                return BadRequest(new { message = "Invalid request" });
             }
 
-            // If user is a teacher, delete their class assignments
-            var roles = await _userManager.GetRolesAsync(user);
-            if (roles.Contains("Teacher"))
+            var teacher = await _userManager.FindByIdAsync(teacherId);
+            if (teacher == null)
             {
-                await _teacherClassRepository.DeleteByTeacherIdAsync(id);
+                return NotFound(new { message = "Teacher not found" });
             }
 
-            var result = await _userManager.DeleteAsync(user);
-            if (result.Succeeded)
+            var roles = await _userManager.GetRolesAsync(teacher);
+            if (!roles.Contains("Teacher"))
             {
-                return Ok(new { message = "User deleted successfully" });
+                return BadRequest(new { message = "User is not a Teacher" });
             }
 
-            return BadRequest(new { message = "Failed to delete user" });
+            // Create new assignment objects
+            var newAssignments = assignments.Select(a => new TeacherClass
+            {
+                Id = Guid.NewGuid().ToString(),
+                TeacherId = teacherId,
+                Class = a.Class,
+                Section = a.Section,
+                AssignedDate = DateTime.UtcNow,
+                IsActive = true
+            }).ToList();
+
+            // Replace all assignments (deletes old, adds new)
+            await _teacherClassRepository.ReplaceByTeacherIdAsync(teacherId, newAssignments);
+
+            return Ok(new
+            {
+                message = $"Teacher's class assignments updated successfully ({newAssignments.Count} assignments)",
+                assignments = newAssignments.Select(a => new
+                {
+                    a.Id,
+                    a.Class,
+                    a.Section
+                })
+            });
         }
+
+        // ============ ROLES ============
 
         [HttpGet("roles")]
         public async Task<IActionResult> GetRoles()
