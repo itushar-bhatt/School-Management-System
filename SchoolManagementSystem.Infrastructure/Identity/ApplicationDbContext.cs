@@ -15,6 +15,7 @@ namespace SchoolManagementSystem.Infrastructure.Identity
         public DbSet<Student> Students { get; set; }
         public DbSet<Parent> Parents { get; set; }
         public DbSet<StudentParent> StudentParents { get; set; }
+        public DbSet<TeacherClass> TeacherClasses { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -49,6 +50,19 @@ namespace SchoolManagementSystem.Infrastructure.Identity
 
             builder.Entity<StudentParent>()
                 .Property(sp => sp.ParentId)
+                .IsRequired();
+
+            // TeacherClass configuration
+            builder.Entity<TeacherClass>()
+                .HasIndex(tc => new { tc.TeacherId, tc.Class, tc.Section })
+                .IsUnique();
+
+            builder.Entity<TeacherClass>()
+                .Property(tc => tc.TeacherId)
+                .IsRequired();
+
+            builder.Entity<TeacherClass>()
+                .Property(tc => tc.Class)
                 .IsRequired();
         }
     }

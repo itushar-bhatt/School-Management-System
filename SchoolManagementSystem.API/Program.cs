@@ -106,6 +106,7 @@ builder.Services.AddScoped<IStudentDashboardService, StudentDashboardService>();
 builder.Services.AddScoped<IStudentRepository, StudentRepository>();
 builder.Services.AddScoped<IParentRepository, ParentRepository>();
 builder.Services.AddScoped<IStudentParentRepository, StudentParentRepository>();
+builder.Services.AddScoped<ITeacherClassRepository, TeacherClassRepository>();
 
 var app = builder.Build();
 

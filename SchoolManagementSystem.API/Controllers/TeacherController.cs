@@ -20,6 +20,7 @@ namespace SchoolManagementSystem.API.Controllers
         private readonly IParentRepository _parentRepository;
         private readonly IStudentRepository _studentRepository;
         private readonly IStudentParentRepository _studentParentRepository;
+        private readonly ITeacherClassRepository _teacherClassRepository;
 
         public TeacherController(
             IAdmissionService admissionService,
@@ -27,7 +28,8 @@ namespace SchoolManagementSystem.API.Controllers
             RoleManager<IdentityRole> roleManager,
             IParentRepository parentRepository,
             IStudentRepository studentRepository,
-            IStudentParentRepository studentParentRepository)
+            IStudentParentRepository studentParentRepository,
+            ITeacherClassRepository teacherClassRepository)
         {
             _admissionService = admissionService;
             _userManager = userManager;
@@ -35,16 +37,37 @@ namespace SchoolManagementSystem.API.Controllers
             _parentRepository = parentRepository;
             _studentRepository = studentRepository;
             _studentParentRepository = studentParentRepository;
+            _teacherClassRepository = teacherClassRepository;
+        }
+
+        // Helper: Get current teacher's ID
+        private string? GetCurrentTeacherId()
+        {
+            return User.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")?.Value;
+        }
+
+        // Helper: Get current teacher's assigned classes
+        private async Task<List<(string Class, string? Section)>> GetAssignedClassesAsync()
+        {
+            var teacherId = GetCurrentTeacherId();
+            if (string.IsNullOrEmpty(teacherId))
+                return new List<(string Class, string? Section)>();
+
+            var assignments = await _teacherClassRepository.GetByTeacherIdAsync(teacherId);
+            return assignments.Select(a => (a.Class, a.Section)).ToList();
         }
 
         [HttpGet("dashboard")]
-        public IActionResult GetTeacherDashboard()
+        public async Task<IActionResult> GetTeacherDashboard()
         {
+            var assignedClasses = await GetAssignedClassesAsync();
+            
             return Ok(new
             {
                 message = "Hi Teacher!",
                 username = User.Identity.Name,
                 role = "Teacher",
+                assignedClasses = assignedClasses.Select(c => new { c.Class, c.Section }),
                 features = new[]
                 {
                     "View class schedules",
@@ -53,7 +76,7 @@ namespace SchoolManagementSystem.API.Controllers
                     "Enter grades and marks",
                     "Create assignments and tests",
                     "Admit new students with parents",
-                    "View students and parents"
+                    "View students and parents (only from assigned classes)"
                 }
             });
         }
@@ -64,6 +87,17 @@ namespace SchoolManagementSystem.API.Controllers
             if (!ModelState.IsValid)
             {
                 return BadRequest(new { message = "Invalid request" });
+            }
+
+            // Check if teacher is assigned to the student's class
+            var assignedClasses = await GetAssignedClassesAsync();
+            var isAssigned = assignedClasses.Any(c => 
+                c.Class == request.Student.Class && 
+                (c.Section == null || c.Section == request.Student.Section));
+
+            if (!isAssigned)
+            {
+                return Forbid();
             }
 
             var (success, message, result) = await _admissionService.AdmitStudentAsync(request);
@@ -155,6 +189,17 @@ namespace SchoolManagementSystem.API.Controllers
                 return NotFound(new { message = "Student not found" });
             }
 
+            // Check if teacher is assigned to this student's class
+            var assignedClasses = await GetAssignedClassesAsync();
+            var isAssigned = assignedClasses.Any(c => 
+                c.Class == student.Class && 
+                (c.Section == null || c.Section == student.Section));
+
+            if (!isAssigned)
+            {
+                return Forbid();
+            }
+
             // Verify parent exists in Parents table
             var parent = await _parentRepository.GetByIdAsync(model.ParentId);
             if (parent == null)
@@ -205,35 +250,37 @@ namespace SchoolManagementSystem.API.Controllers
         [HttpGet("students")]
         public async Task<IActionResult> GetStudents([FromQuery] string? className, [FromQuery] string? section)
         {
-            // Get students from Students table (not AspNetUsers)
-            IEnumerable<Domain.Entities.Student> students;
+            // Get teacher's assigned classes
+            var assignedClasses = await GetAssignedClassesAsync();
+            
+            if (!assignedClasses.Any())
+            {
+                return Ok(new List<object>());
+            }
 
-            if (!string.IsNullOrEmpty(className) && !string.IsNullOrEmpty(section))
+            // Get all students
+            var allStudents = await _studentRepository.GetAllAsync();
+
+            // Filter students by teacher's assigned classes
+            var filteredStudents = allStudents.Where(s => 
+                assignedClasses.Any(c => 
+                    c.Class == s.Class && 
+                    (c.Section == null || c.Section == s.Section)));
+
+            // Apply additional filters if provided
+            if (!string.IsNullOrEmpty(className))
             {
-                // Search by both class and section
-                students = await _studentRepository.GetByClassAndSectionAsync(className, section);
+                filteredStudents = filteredStudents.Where(s => s.Class == className);
             }
-            else if (!string.IsNullOrEmpty(className))
+
+            if (!string.IsNullOrEmpty(section))
             {
-                // Search by class only
-                var allStudents = await _studentRepository.GetAllAsync();
-                students = allStudents.Where(s => s.Class == className);
-            }
-            else if (!string.IsNullOrEmpty(section))
-            {
-                // Search by section only
-                var allStudents = await _studentRepository.GetAllAsync();
-                students = allStudents.Where(s => s.Section == section);
-            }
-            else
-            {
-                // Get all students
-                students = await _studentRepository.GetAllAsync();
+                filteredStudents = filteredStudents.Where(s => s.Section == section);
             }
 
             // Join with UserManager to get user details
             var result = new List<object>();
-            foreach (var student in students)
+            foreach (var student in filteredStudents)
             {
                 var user = await _userManager.FindByIdAsync(student.UserId);
                 result.Add(new
@@ -257,25 +304,52 @@ namespace SchoolManagementSystem.API.Controllers
         [HttpGet("parents")]
         public async Task<IActionResult> GetParents()
         {
-            // Get all parents from Parents table
-            var parents = await _parentRepository.GetAllAsync();
-
-            // Join with UserManager to get user details
-            var result = new List<object>();
-            foreach (var parent in parents)
+            // Get teacher's assigned classes
+            var assignedClasses = await GetAssignedClassesAsync();
+            
+            if (!assignedClasses.Any())
             {
-                var user = await _userManager.FindByIdAsync(parent.UserId);
-                result.Add(new
+                return Ok(new List<object>());
+            }
+
+            // Get all students from teacher's assigned classes
+            var allStudents = await _studentRepository.GetAllAsync();
+            var assignedStudents = allStudents.Where(s => 
+                assignedClasses.Any(c => 
+                    c.Class == s.Class && 
+                    (c.Section == null || c.Section == s.Section))).ToList();
+
+            // Get all student-parent links for these students
+            var parentIds = new HashSet<string>();
+            foreach (var student in assignedStudents)
+            {
+                var links = await _studentParentRepository.GetByStudentIdAsync(student.Id);
+                foreach (var link in links)
                 {
-                    id = parent.Id,
-                    userId = parent.UserId,
-                    phone = parent.Phone,
-                    address = parent.Address,
-                    occupation = parent.Occupation,
-                    username = user?.UserName,
-                    fullName = user?.FullName,
-                    email = user?.Email
-                });
+                    parentIds.Add(link.ParentId);
+                }
+            }
+
+            // Get parent details
+            var result = new List<object>();
+            foreach (var parentId in parentIds)
+            {
+                var parent = await _parentRepository.GetByIdAsync(parentId);
+                if (parent != null)
+                {
+                    var user = await _userManager.FindByIdAsync(parent.UserId);
+                    result.Add(new
+                    {
+                        id = parent.Id,
+                        userId = parent.UserId,
+                        phone = parent.Phone,
+                        address = parent.Address,
+                        occupation = parent.Occupation,
+                        username = user?.UserName,
+                        fullName = user?.FullName,
+                        email = user?.Email
+                    });
+                }
             }
 
             return Ok(result);
@@ -284,11 +358,12 @@ namespace SchoolManagementSystem.API.Controllers
         [HttpGet("classes")]
         public async Task<IActionResult> GetClasses()
         {
-            // Get all students and extract unique classes
-            var students = await _studentRepository.GetAllAsync();
-            var classes = students
-                .Where(s => !string.IsNullOrEmpty(s.Class))
-                .Select(s => s.Class)
+            // Get teacher's assigned classes
+            var assignedClasses = await GetAssignedClassesAsync();
+            
+            // Return unique classes from assignments
+            var classes = assignedClasses
+                .Select(c => c.Class)
                 .Distinct()
                 .OrderBy(c => c)
                 .ToList();
@@ -299,14 +374,31 @@ namespace SchoolManagementSystem.API.Controllers
         [HttpGet("classes/{className}/sections")]
         public async Task<IActionResult> GetSections(string className)
         {
-            // Get all students and extract unique sections for the specified class
-            var students = await _studentRepository.GetAllAsync();
-            var sections = students
-                .Where(s => s.Class == className && !string.IsNullOrEmpty(s.Section))
-                .Select(s => s.Section)
+            // Get teacher's assigned classes
+            var assignedClasses = await GetAssignedClassesAsync();
+            
+            // Filter by the specified class and return sections
+            var sections = assignedClasses
+                .Where(c => c.Class == className && c.Section != null)
+                .Select(c => c.Section!)
                 .Distinct()
                 .OrderBy(s => s)
                 .ToList();
+
+            // If teacher has "all sections" (null) for this class, get all sections from students
+            if (assignedClasses.Any(c => c.Class == className && c.Section == null))
+            {
+                var allStudents = await _studentRepository.GetAllAsync();
+                var studentSections = allStudents
+                    .Where(s => s.Class == className && !string.IsNullOrEmpty(s.Section))
+                    .Select(s => s.Section)
+                    .Distinct()
+                    .OrderBy(s => s)
+                    .ToList();
+
+                // Merge with assigned sections
+                sections = sections.Union(studentSections).OrderBy(s => s).ToList();
+            }
 
             return Ok(sections);
         }
