@@ -253,37 +253,76 @@ namespace SchoolManagementSystem.API.Controllers
             // Get teacher's assigned classes
             var assignedClasses = await GetAssignedClassesAsync();
             
+            // If specific class/section is requested, check if teacher is assigned
+            if (!string.IsNullOrEmpty(className))
+            {
+                var isAssigned = assignedClasses.Any(c => 
+                    c.Class == className && 
+                    (c.Section == null || c.Section == section));
+
+                if (!isAssigned)
+                {
+                    return Ok(new 
+                    { 
+                        message = $"You are not assigned to Class {className}" + 
+                            (!string.IsNullOrEmpty(section) ? $" Section {section}" : "") +
+                            ". Please contact the admin to update your class assignments.",
+                        students = new List<object>()
+                    });
+                }
+
+                // Teacher is assigned - get students from this class/section
+                IEnumerable<Domain.Entities.Student> students;
+                if (!string.IsNullOrEmpty(section))
+                {
+                    students = await _studentRepository.GetByClassAndSectionAsync(className, section);
+                }
+                else
+                {
+                    var allStudents = await _studentRepository.GetAllAsync();
+                    students = allStudents.Where(s => s.Class == className);
+                }
+
+                // Join with UserManager to get user details
+                var result = new List<object>();
+                foreach (var student in students)
+                {
+                    var user = await _userManager.FindByIdAsync(student.UserId);
+                    result.Add(new
+                    {
+                        id = student.Id,
+                        userId = student.UserId,
+                        admissionNo = student.AdmissionNo,
+                        class_ = student.Class,
+                        section = student.Section,
+                        admissionDate = student.AdmissionDate,
+                        isActive = student.IsActive,
+                        username = user?.UserName,
+                        fullName = user?.FullName,
+                        email = user?.Email
+                    });
+                }
+
+                return Ok(result);
+            }
+
+            // No specific class requested - return all students from assigned classes
             if (!assignedClasses.Any())
             {
                 return Ok(new List<object>());
             }
 
-            // Get all students
-            var allStudents = await _studentRepository.GetAllAsync();
-
-            // Filter students by teacher's assigned classes
-            var filteredStudents = allStudents.Where(s => 
+            var allStudentsList = await _studentRepository.GetAllAsync();
+            var filteredStudents = allStudentsList.Where(s => 
                 assignedClasses.Any(c => 
                     c.Class == s.Class && 
                     (c.Section == null || c.Section == s.Section)));
 
-            // Apply additional filters if provided
-            if (!string.IsNullOrEmpty(className))
-            {
-                filteredStudents = filteredStudents.Where(s => s.Class == className);
-            }
-
-            if (!string.IsNullOrEmpty(section))
-            {
-                filteredStudents = filteredStudents.Where(s => s.Section == section);
-            }
-
-            // Join with UserManager to get user details
-            var result = new List<object>();
+            var studentList = new List<object>();
             foreach (var student in filteredStudents)
             {
                 var user = await _userManager.FindByIdAsync(student.UserId);
-                result.Add(new
+                studentList.Add(new
                 {
                     id = student.Id,
                     userId = student.UserId,
@@ -298,7 +337,7 @@ namespace SchoolManagementSystem.API.Controllers
                 });
             }
 
-            return Ok(result);
+            return Ok(studentList);
         }
 
         [HttpGet("parents")]
@@ -376,6 +415,17 @@ namespace SchoolManagementSystem.API.Controllers
         {
             // Get teacher's assigned classes
             var assignedClasses = await GetAssignedClassesAsync();
+            
+            // Check if teacher is assigned to this class
+            var isAssigned = assignedClasses.Any(c => c.Class == className);
+            if (!isAssigned)
+            {
+                return Ok(new 
+                { 
+                    message = $"You are not assigned to Class {className}. Please contact admin.",
+                    sections = new List<string>()
+                });
+            }
             
             // Filter by the specified class and return sections
             var sections = assignedClasses

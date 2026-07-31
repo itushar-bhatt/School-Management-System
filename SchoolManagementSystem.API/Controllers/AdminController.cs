@@ -16,15 +16,18 @@ namespace SchoolManagementSystem.API.Controllers
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly RoleManager<IdentityRole> _roleManager;
         private readonly ITeacherClassRepository _teacherClassRepository;
+        private readonly IStudentRepository _studentRepository;
 
         public AdminController(
             UserManager<ApplicationUser> userManager,
             RoleManager<IdentityRole> roleManager,
-            ITeacherClassRepository teacherClassRepository)
+            ITeacherClassRepository teacherClassRepository,
+            IStudentRepository studentRepository)
         {
             _userManager = userManager;
             _roleManager = roleManager;
             _teacherClassRepository = teacherClassRepository;
+            _studentRepository = studentRepository;
         }
 
         [HttpGet("dashboard")]
@@ -44,7 +47,8 @@ namespace SchoolManagementSystem.API.Controllers
                     "Create teachers with class assignments",
                     "Manage teacher class assignments",
                     "View all users",
-                    "Delete users"
+                    "Delete users",
+                    "Search students by class and section"
                 }
             });
         }
@@ -167,6 +171,55 @@ namespace SchoolManagementSystem.API.Controllers
             }
 
             return BadRequest(new { message = "Failed to delete user" });
+        }
+
+        // ============ STUDENT SEARCH ============
+
+        // Search students by class and section (admin can see all)
+        [HttpGet("students")]
+        public async Task<IActionResult> GetStudents([FromQuery] string? className, [FromQuery] string? section)
+        {
+            IEnumerable<Domain.Entities.Student> students;
+
+            if (!string.IsNullOrEmpty(className) && !string.IsNullOrEmpty(section))
+            {
+                students = await _studentRepository.GetByClassAndSectionAsync(className, section);
+            }
+            else if (!string.IsNullOrEmpty(className))
+            {
+                var allStudents = await _studentRepository.GetAllAsync();
+                students = allStudents.Where(s => s.Class == className);
+            }
+            else if (!string.IsNullOrEmpty(section))
+            {
+                var allStudents = await _studentRepository.GetAllAsync();
+                students = allStudents.Where(s => s.Section == section);
+            }
+            else
+            {
+                students = await _studentRepository.GetAllAsync();
+            }
+
+            var result = new List<object>();
+            foreach (var student in students)
+            {
+                var user = await _userManager.FindByIdAsync(student.UserId);
+                result.Add(new
+                {
+                    id = student.Id,
+                    userId = student.UserId,
+                    admissionNo = student.AdmissionNo,
+                    class_ = student.Class,
+                    section = student.Section,
+                    admissionDate = student.AdmissionDate,
+                    isActive = student.IsActive,
+                    username = user?.UserName,
+                    fullName = user?.FullName,
+                    email = user?.Email
+                });
+            }
+
+            return Ok(result);
         }
 
         // ============ TEACHER CLASS ASSIGNMENT MANAGEMENT ============
