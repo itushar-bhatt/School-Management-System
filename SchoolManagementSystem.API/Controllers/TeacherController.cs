@@ -126,9 +126,10 @@ namespace SchoolManagementSystem.API.Controllers
             }
 
             // Create Identity user
+            // Parent logs in with Phone number as UserName
             var user = new ApplicationUser
             {
-                UserName = model.Username,
+                UserName = model.Phone,
                 Email = model.Email,
                 FullName = model.FullName,
                 EmailConfirmed = true

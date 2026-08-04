@@ -134,13 +134,14 @@ using (var scope = app.Services.CreateScope())
     }
     
     // Seed admin user
+    // Admin logs in with Email as UserName
     var adminEmail = "admin@school.com";
     var adminUser = await userManager.FindByEmailAsync(adminEmail);
     if (adminUser == null)
     {
         adminUser = new ApplicationUser
         {
-            UserName = "admin",
+            UserName = adminEmail,
             Email = adminEmail,
             EmailConfirmed = true,
             FullName = "System Administrator"

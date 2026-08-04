@@ -30,29 +30,62 @@ namespace SchoolManagementSystem.API.Controllers
             {
                 return BadRequest(new { message = "Invalid request" });
             }
-            
-            // Attempt to sign in the user with the provided credentials    
-            var result = await _signInManager.PasswordSignInAsync(
-                model.Username, model.Password, model.RememberMe, lockoutOnFailure: false);
+
+            // Find the user based on the role
+            ApplicationUser? user = null;
+
+            switch (model.Role)
+            {
+                case "Admin":
+                case "Teacher":
+                    // Admin and Teacher login with Email
+                    user = await _userManager.FindByEmailAsync(model.Identifier);
+                    break;
+
+                case "Parent":
+                    // Parent login with Phone number (stored as UserName)
+                    user = await _userManager.FindByNameAsync(model.Identifier);
+                    break;
+
+                case "Student":
+                    // Student login with Admission Number (stored as UserName)
+                    user = await _userManager.FindByNameAsync(model.Identifier);
+                    break;
+
+                default:
+                    return BadRequest(new { message = "Invalid role. Allowed roles: Admin, Teacher, Parent, Student" });
+            }
+
+            if (user == null)
+            {
+                return Unauthorized(new { message = "Invalid credentials" });
+            }
+
+            // Verify password using ASP.NET Identity
+            var result = await _signInManager.PasswordSignInAsync(user, model.Password, model.RememberMe, lockoutOnFailure: false);
 
             if (result.Succeeded)
             {
-                var user = await _userManager.FindByNameAsync(model.Username);
-                if (user != null)
+                // Get user roles and verify the requested role matches
+                var roles = await _userManager.GetRolesAsync(user);
+                if (!roles.Contains(model.Role))
                 {
-                    var roles = await _userManager.GetRolesAsync(user);
-                    return Ok(new 
-                    { 
-                        message = "Login successful",
-                        username = user.UserName,
-                        email = user.Email,
-                        fullName = user.FullName,
-                        roles = roles.ToList()
-                    });
+                    return Unauthorized(new { message = "Invalid role for this user" });
                 }
+
+                return Ok(new
+                {
+                    message = "Login successful",
+                    userId = user.Id,
+                    username = user.UserName,
+                    email = user.Email,
+                    fullName = user.FullName,
+                    role = model.Role,
+                    roles = roles.ToList()
+                });
             }
 
-            return Unauthorized(new { message = "Invalid username or password" });
+            return Unauthorized(new { message = "Invalid credentials" });
         }
 
         [HttpPost("register")]

@@ -87,9 +87,10 @@ namespace SchoolManagementSystem.API.Controllers
             }
 
             // Create Identity user
+            // Teacher logs in with Email as UserName
             var user = new ApplicationUser
             {
-                UserName = model.Username,
+                UserName = model.Email,
                 Email = model.Email,
                 FullName = model.FullName,
                 EmailConfirmed = true

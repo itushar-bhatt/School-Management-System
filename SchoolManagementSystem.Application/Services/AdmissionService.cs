@@ -32,9 +32,10 @@ namespace SchoolManagementSystem.Application.Services
             try
             {
                 // Step 1: Create Student Identity User
+                // Student logs in with Admission Number as UserName
                 var (studentSuccess, studentMessage, studentUserId) = await _identityService.CreateUserAsync(
-                    request.Student.Username,
-                    $"{request.Student.Username}@school.com",
+                    request.Student.AdmissionNo,
+                    $"{request.Student.AdmissionNo}@school.com",
                     request.Student.Name,
                     request.Student.Password,
                     "Student");
@@ -66,17 +67,17 @@ namespace SchoolManagementSystem.Application.Services
                 if (existingParent == null)
                 {
                     // Step 4a: Create Parent Identity User (if not exists)
+                    // Parent logs in with Phone number as UserName
                     var (parentSuccess, parentMessage, parentUserId) = await _identityService.CreateUserAsync(
-                        request.Parent.Username,
-                        $"{request.Parent.Username}@example.com",
-                        request.Parent.Username,
+                        request.Parent.Phone,
+                        $"{request.Parent.Phone}@example.com",
+                        request.Parent.Phone,
                         request.Parent.Password,
                         "Parent");
 
                     if (!parentSuccess)
                     {
                         // Rollback: Delete student user if parent creation fails
-                        // Note: In production, use a transaction
                         return (false, $"Failed to create parent account: {parentMessage}", null);
                     }
 
@@ -127,7 +128,7 @@ namespace SchoolManagementSystem.Application.Services
                         student.AdmissionNo,
                         student.Class,
                         student.Section,
-                        Username = request.Student.Username,
+                        Username = request.Student.AdmissionNo,
                         FullName = request.Student.Name
                     },
                     parent = new
