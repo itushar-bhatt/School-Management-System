@@ -31,29 +31,12 @@ namespace SchoolManagementSystem.API.Controllers
                 return BadRequest(new { message = "Invalid request" });
             }
 
-            // Find the user based on the role
-            ApplicationUser? user = null;
-
-            switch (model.Role)
+            // Auto-detect user: try Email first, then UserName (Phone/AdmissionNo)
+            var user = await _userManager.FindByEmailAsync(model.Identifier);
+            
+            if (user == null)
             {
-                case "Admin":
-                case "Teacher":
-                    // Admin and Teacher login with Email
-                    user = await _userManager.FindByEmailAsync(model.Identifier);
-                    break;
-
-                case "Parent":
-                    // Parent login with Phone number (stored as UserName)
-                    user = await _userManager.FindByNameAsync(model.Identifier);
-                    break;
-
-                case "Student":
-                    // Student login with Admission Number (stored as UserName)
-                    user = await _userManager.FindByNameAsync(model.Identifier);
-                    break;
-
-                default:
-                    return BadRequest(new { message = "Invalid role. Allowed roles: Admin, Teacher, Parent, Student" });
+                user = await _userManager.FindByNameAsync(model.Identifier);
             }
 
             if (user == null)
@@ -66,12 +49,8 @@ namespace SchoolManagementSystem.API.Controllers
 
             if (result.Succeeded)
             {
-                // Get user roles and verify the requested role matches
+                // Get the user's actual role
                 var roles = await _userManager.GetRolesAsync(user);
-                if (!roles.Contains(model.Role))
-                {
-                    return Unauthorized(new { message = "Invalid role for this user" });
-                }
 
                 return Ok(new
                 {
@@ -80,7 +59,7 @@ namespace SchoolManagementSystem.API.Controllers
                     username = user.UserName,
                     email = user.Email,
                     fullName = user.FullName,
-                    role = model.Role,
+                    role = roles.FirstOrDefault(),
                     roles = roles.ToList()
                 });
             }
