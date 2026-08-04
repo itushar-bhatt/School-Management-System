@@ -20,7 +20,7 @@ builder.Services.AddSwaggerGen(options =>
     {
         Title = "School Management System",
         Version = "v1",
-        Description = "Authentication and User Management API for School Management System",
+        Description = "School Management System",
         Contact = new Microsoft.OpenApi.Models.OpenApiContact
         {
             Name = "School Management System"
