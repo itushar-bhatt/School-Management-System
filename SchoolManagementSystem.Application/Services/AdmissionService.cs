@@ -14,28 +14,58 @@ namespace SchoolManagementSystem.Application.Services
         private readonly IStudentRepository _studentRepository;
         private readonly IParentRepository _parentRepository;
         private readonly IStudentParentRepository _studentParentRepository;
+        private readonly IAdmissionSequenceRepository _admissionSequenceRepository;
 
         public AdmissionService(
             IIdentityService identityService,
             IStudentRepository studentRepository,
             IParentRepository parentRepository,
-            IStudentParentRepository studentParentRepository)
+            IStudentParentRepository studentParentRepository,
+            IAdmissionSequenceRepository admissionSequenceRepository)
         {
             _identityService = identityService;
             _studentRepository = studentRepository;
             _parentRepository = parentRepository;
             _studentParentRepository = studentParentRepository;
+            _admissionSequenceRepository = admissionSequenceRepository;
+        }
+
+        private async Task<string> GenerateAdmissionNoAsync(string academicSession)
+        {
+            // Find the sequence for this academic session
+            var sequence = await _admissionSequenceRepository.GetBySessionAsync(academicSession);
+            
+            if (sequence == null)
+            {
+                sequence = new AdmissionSequence
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    AcademicSession = academicSession,
+                    LastNumber = 0
+                };
+                await _admissionSequenceRepository.AddAsync(sequence);
+            }
+            
+            // Increment the sequence
+            sequence.LastNumber++;
+            await _admissionSequenceRepository.UpdateAsync(sequence);
+            
+            // Format: ADM-20260001
+            return $"ADM-{academicSession}{sequence.LastNumber:D4}";
         }
 
         public async Task<(bool Success, string Message, object Result)> AdmitStudentAsync(AdmissionRequest request)
         {
             try
             {
-                // Step 1: Create Student Identity User
+                // Step 1: Generate Admission Number
+                var admissionNo = await GenerateAdmissionNoAsync(request.Student.AcademicSession);
+
+                // Step 2: Create Student Identity User
                 // Student logs in with Admission Number as UserName
                 var (studentSuccess, studentMessage, studentUserId) = await _identityService.CreateUserAsync(
-                    request.Student.AdmissionNo,
-                    $"{request.Student.AdmissionNo}@school.com",
+                    admissionNo,
+                    $"{admissionNo}@school.com",
                     request.Student.Name,
                     request.Student.Password,
                     "Student");
@@ -45,50 +75,63 @@ namespace SchoolManagementSystem.Application.Services
                     return (false, $"Failed to create student account: {studentMessage}", null);
                 }
 
-                // Step 2: Create Student Profile
+                // Step 3: Create Student Profile with all details
                 var student = new Student
                 {
                     Id = Guid.NewGuid().ToString(),
                     UserId = studentUserId,
-                    AdmissionNo = request.Student.AdmissionNo,
+                    
+                    // Student Details
+                    Name = request.Student.Name,
+                    DOB = request.Student.DOB,
+                    Gender = request.Student.Gender,
+                    Address = request.Student.Address,
+                    City = request.Student.City,
+                    State = request.Student.State,
+                    Pincode = request.Student.Pincode,
+                    
+                    // Academic Details
+                    AdmissionNo = admissionNo,
+                    AdmissionDate = DateTime.UtcNow,
+                    AcademicSession = request.Student.AcademicSession,
                     Class = request.Student.Class,
                     Section = request.Student.Section,
-                    AdmissionDate = DateTime.UtcNow,
+                    
                     IsActive = true
                 };
 
                 await _studentRepository.AddAsync(student);
 
-                // Step 3: Search for Parent by Phone
+                // Step 4: Search for Parent by Phone
                 var existingParent = await _parentRepository.GetByPhoneAsync(request.Parent.Phone);
                 Parent parentProfile;
                 bool isNewParent = false;
 
                 if (existingParent == null)
                 {
-                    // Step 4a: Create Parent Identity User (if not exists)
+                    // Step 5: Create Parent Identity User (if not exists)
                     // Parent logs in with Phone number as UserName
                     var (parentSuccess, parentMessage, parentUserId) = await _identityService.CreateUserAsync(
                         request.Parent.Phone,
                         $"{request.Parent.Phone}@example.com",
-                        request.Parent.Phone,
+                        request.Parent.FatherName,
                         request.Parent.Password,
                         "Parent");
 
                     if (!parentSuccess)
                     {
-                        // Rollback: Delete student user if parent creation fails
                         return (false, $"Failed to create parent account: {parentMessage}", null);
                     }
 
-                    // Create Parent Profile
+                    // Create Parent Profile with Father/Mother Name
                     parentProfile = new Parent
                     {
                         Id = Guid.NewGuid().ToString(),
                         UserId = parentUserId,
+                        FatherName = request.Parent.FatherName,
+                        MotherName = request.Parent.MotherName,
                         Phone = request.Parent.Phone,
                         Address = request.Parent.Address,
-                        Occupation = request.Parent.Occupation,
                         CreatedAt = DateTime.UtcNow,
                         IsActive = true
                     };
@@ -102,7 +145,7 @@ namespace SchoolManagementSystem.Application.Services
                     parentProfile = existingParent;
                 }
 
-                // Step 5: Create Student-Parent Link
+                // Step 6: Create Student-Parent Link
                 var linkExists = await _studentParentRepository.ExistsAsync(student.Id, parentProfile.Id);
                 if (linkExists)
                 {
@@ -118,7 +161,7 @@ namespace SchoolManagementSystem.Application.Services
 
                 await _studentParentRepository.AddAsync(studentParent);
 
-                // Step 6: Return success response
+                // Step 7: Return success response
                 var result = new
                 {
                     student = new
@@ -126,16 +169,25 @@ namespace SchoolManagementSystem.Application.Services
                         student.Id,
                         student.UserId,
                         student.AdmissionNo,
+                        student.Name,
+                        student.DOB,
+                        student.Gender,
+                        student.AcademicSession,
                         student.Class,
                         student.Section,
-                        Username = request.Student.AdmissionNo,
-                        FullName = request.Student.Name
+                        student.Address,
+                        student.City,
+                        student.State,
+                        student.Pincode
                     },
                     parent = new
                     {
                         parentProfile.Id,
                         parentProfile.UserId,
+                        parentProfile.FatherName,
+                        parentProfile.MotherName,
                         parentProfile.Phone,
+                        parentProfile.Address,
                         IsNewParent = isNewParent
                     },
                     link = new
@@ -146,7 +198,7 @@ namespace SchoolManagementSystem.Application.Services
                     }
                 };
 
-                return (true, "Student admitted successfully and linked with parent", result);
+                return (true, $"Student admitted successfully. Admission No: {admissionNo}", result);
             }
             catch (Exception ex)
             {

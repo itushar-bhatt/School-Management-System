@@ -4,9 +4,13 @@ namespace SchoolManagementSystem.Domain.Entities
     {
         public string Id { get; set; } = string.Empty;
         public string UserId { get; set; } = string.Empty;
+        
+        // Parent Details
+        public string FatherName { get; set; } = string.Empty;
+        public string MotherName { get; set; } = string.Empty;
         public string Phone { get; set; } = string.Empty;
-        public string? Address { get; set; }
-        public string? Occupation { get; set; }
+        public string Address { get; set; } = string.Empty;
+        
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public bool IsActive { get; set; } = true;
         

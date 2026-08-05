@@ -16,6 +16,7 @@ namespace SchoolManagementSystem.Infrastructure.Identity
         public DbSet<Parent> Parents { get; set; }
         public DbSet<StudentParent> StudentParents { get; set; }
         public DbSet<TeacherClass> TeacherClasses { get; set; }
+        public DbSet<AdmissionSequence> AdmissionSequences { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {

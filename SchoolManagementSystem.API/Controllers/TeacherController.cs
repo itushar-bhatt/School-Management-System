@@ -153,7 +153,8 @@ namespace SchoolManagementSystem.API.Controllers
                     UserId = user.Id,
                     Phone = model.Phone,
                     Address = model.Address,
-                    Occupation = model.Occupation,
+                    FatherName = model.FatherName,
+                    MotherName = model.MotherName,
                     CreatedAt = DateTime.UtcNow,
                     IsActive = true
                 };
@@ -382,9 +383,10 @@ namespace SchoolManagementSystem.API.Controllers
                     {
                         id = parent.Id,
                         userId = parent.UserId,
+                        fatherName = parent.FatherName,
+                        motherName = parent.MotherName,
                         phone = parent.Phone,
                         address = parent.Address,
-                        occupation = parent.Occupation,
                         username = user?.UserName,
                         fullName = user?.FullName,
                         email = user?.Email

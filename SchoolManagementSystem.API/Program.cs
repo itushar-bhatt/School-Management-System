@@ -107,6 +107,7 @@ builder.Services.AddScoped<IStudentRepository, StudentRepository>();
 builder.Services.AddScoped<IParentRepository, ParentRepository>();
 builder.Services.AddScoped<IStudentParentRepository, StudentParentRepository>();
 builder.Services.AddScoped<ITeacherClassRepository, TeacherClassRepository>();
+builder.Services.AddScoped<IAdmissionSequenceRepository, AdmissionSequenceRepository>();
 
 var app = builder.Build();
 
