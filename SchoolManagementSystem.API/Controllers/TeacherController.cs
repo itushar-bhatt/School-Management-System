@@ -110,71 +110,6 @@ namespace SchoolManagementSystem.API.Controllers
             return BadRequest(new { message });
         }
 
-        [HttpPost("users/parent")]
-        public async Task<IActionResult> CreateParent([FromBody] CreateParentRequest model)
-        {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(new { message = "Invalid request" });
-            }
-
-            // Check if parent with this phone already exists
-            var existingParent = await _parentRepository.GetByPhoneAsync(model.Phone);
-            if (existingParent != null)
-            {
-                return BadRequest(new { message = "Parent with this phone number already exists" });
-            }
-
-            // Create Identity user
-            // Parent logs in with Phone number as UserName
-            var user = new ApplicationUser
-            {
-                UserName = model.Phone,
-                Email = model.Email,
-                FullName = model.FullName,
-                EmailConfirmed = true
-            };
-
-            var result = await _userManager.CreateAsync(user, model.Password);
-
-            if (result.Succeeded)
-            {
-                // Assign Parent role
-                if (!await _roleManager.RoleExistsAsync("Parent"))
-                {
-                    await _roleManager.CreateAsync(new IdentityRole("Parent"));
-                }
-                await _userManager.AddToRoleAsync(user, "Parent");
-
-                // Create Parent profile
-                var parent = new Domain.Entities.Parent
-                {
-                    Id = Guid.NewGuid().ToString(),
-                    UserId = user.Id,
-                    Phone = model.Phone,
-                    Address = model.Address,
-                    FatherName = model.FatherName,
-                    MotherName = model.MotherName,
-                    CreatedAt = DateTime.UtcNow,
-                    IsActive = true
-                };
-
-                await _parentRepository.AddAsync(parent);
-
-                return Ok(new { 
-                    message = $"Parent '{model.Username}' created successfully",
-                    parent = new {
-                        parent.Id,
-                        parent.UserId,
-                        parent.Phone,
-                        user.UserName,
-                        user.FullName
-                    }
-                });
-            }
-
-            return BadRequest(new { message = string.Join(", ", result.Errors.Select(e => e.Description)) });
-        }
 
         [HttpPost("link-student-parent")]
         public async Task<IActionResult> LinkStudentParent([FromBody] LinkStudentParentRequest model)
@@ -397,7 +332,7 @@ namespace SchoolManagementSystem.API.Controllers
             return Ok(result);
         }
 
-        [HttpGet("classes")]
+        [HttpGet("assigned-classes")]
         public async Task<IActionResult> GetClasses()
         {
             // Get teacher's assigned classes
@@ -411,49 +346,6 @@ namespace SchoolManagementSystem.API.Controllers
                 .ToList();
 
             return Ok(classes);
-        }
-
-        [HttpGet("classes/{className}/sections")]
-        public async Task<IActionResult> GetSections(string className)
-        {
-            // Get teacher's assigned classes
-            var assignedClasses = await GetAssignedClassesAsync();
-            
-            // Check if teacher is assigned to this class
-            var isAssigned = assignedClasses.Any(c => c.Class == className);
-            if (!isAssigned)
-            {
-                return Ok(new 
-                { 
-                    message = $"You are not assigned to Class {className}. Please contact admin.",
-                    sections = new List<string>()
-                });
-            }
-            
-            // Filter by the specified class and return sections
-            var sections = assignedClasses
-                .Where(c => c.Class == className && c.Section != null)
-                .Select(c => c.Section!)
-                .Distinct()
-                .OrderBy(s => s)
-                .ToList();
-
-            // If teacher has "all sections" (null) for this class, get all sections from students
-            if (assignedClasses.Any(c => c.Class == className && c.Section == null))
-            {
-                var allStudents = await _studentRepository.GetAllAsync();
-                var studentSections = allStudents
-                    .Where(s => s.Class == className && !string.IsNullOrEmpty(s.Section))
-                    .Select(s => s.Section)
-                    .Distinct()
-                    .OrderBy(s => s)
-                    .ToList();
-
-                // Merge with assigned sections
-                sections = sections.Union(studentSections).OrderBy(s => s).ToList();
-            }
-
-            return Ok(sections);
         }
     }
 }

@@ -10,7 +10,7 @@ namespace SchoolManagementSystem.Application.DTOs
     {
         // Student Details
         public string Name { get; set; } = string.Empty;
-        public DateTime DOB { get; set; }
+        public DateOnly DOB { get; set; } = DateOnly.MinValue;
         public string Gender { get; set; } = string.Empty;
         public string Address { get; set; } = string.Empty;
         public string City { get; set; } = string.Empty;

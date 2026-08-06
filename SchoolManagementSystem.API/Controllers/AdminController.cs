@@ -78,7 +78,7 @@ namespace SchoolManagementSystem.API.Controllers
         }
 
         // Create teacher WITH class assignments at registration time
-        [HttpPost("users/teacher")]
+        [HttpPost("create-teacher")]
         public async Task<IActionResult> CreateTeacher([FromBody] CreateTeacherRequest model)
         {
             if (!ModelState.IsValid)
@@ -133,7 +133,7 @@ namespace SchoolManagementSystem.API.Controllers
 
                 return Ok(new
                 {
-                    message = $"Teacher '{model.Username}' created successfully with {assignedClasses.Count} class assignment(s)",
+                    message = $"Teacher '{model.FullName}' created successfully with {assignedClasses.Count} class assignment(s)",
                     teacher = new
                     {
                         user.Id,
@@ -149,7 +149,7 @@ namespace SchoolManagementSystem.API.Controllers
         }
 
         // Delete any user
-        [HttpDelete("users/{id}")]
+        [HttpDelete("delete-user")]
         public async Task<IActionResult> DeleteUser(string id)
         {
             var user = await _userManager.FindByIdAsync(id);
@@ -226,7 +226,7 @@ namespace SchoolManagementSystem.API.Controllers
         // ============ TEACHER CLASS ASSIGNMENT MANAGEMENT ============
 
         // Get all classes assigned to a teacher
-        [HttpGet("teachers/{teacherId}/classes")]
+        [HttpGet("teachers/assigned-classes")]
         public async Task<IActionResult> GetTeacherClasses(string teacherId)
         {
             var teacher = await _userManager.FindByIdAsync(teacherId);
@@ -251,7 +251,7 @@ namespace SchoolManagementSystem.API.Controllers
         }
 
         // Replace ALL class assignments for a teacher (bulk update)
-        [HttpPut("teachers/{teacherId}/classes")]
+        [HttpPut("teachers/update-classes")]
         public async Task<IActionResult> ReplaceTeacherClasses(string teacherId, [FromBody] List<AssignClassRequest> assignments)
         {
             if (!ModelState.IsValid)
@@ -295,15 +295,6 @@ namespace SchoolManagementSystem.API.Controllers
                     a.Section
                 })
             });
-        }
-
-        // ============ ROLES ============
-
-        [HttpGet("roles")]
-        public async Task<IActionResult> GetRoles()
-        {
-            var roles = _roleManager.Roles.Select(r => r.Name).ToList();
-            return Ok(roles);
         }
     }
 }
